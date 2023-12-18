@@ -6,12 +6,15 @@ body {
     align-items: center;
     justify-content: center;
     height: 100vh;
+    background-image: url('bg.png');
+    background-size: cover;
+    background-position: center;
 }
 
 .container {
     width: 100%;
     max-width: 400px;
-    background-color: #fff;
+    background-color: rgba(255, 255, 255, 0.9); 
     padding: 20px;
     border-radius: 10px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
