@@ -2,65 +2,130 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hero Breeding Rarity Calculator</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>Line Splitter and Joiner</title>
     <style>
-        .social-links {
-            text-align: center;
-            margin-top: 20px;
+        body {
+            font-family: Arial, sans-serif;
         }
-
-        .social-links a {
-            display: inline-block;
-            margin: 0 10px;
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            align-items: flex-start;
+            margin: 20px;
+        }
+        .text-area {
+            height: 300px; /* Increased height */
+            width: 80%; /* Adjusted width */
+            resize: none;
+        }
+        .input-container {
+            margin-bottom: 20px;
+        }
+        .input-container input[type="text"] {
+            width: 100%; /* Adjusted width */
+            margin-bottom: 10px;
+        }
+        .button-container button {
+            margin-top: 10px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>Hero Breeding Rarity Calculator</h1>
-        </header>
-        <form>
-            <div class="form-group">
-                <label for="parent1">Parent 1's Rarity:</label>
-                <select id="parent1">
-                    <option value="Common">Common</option>
-                    <option value="Uncommon">Uncommon</option>
-                    <option value="Rare">Rare</option>
-                    <option value="Epic">Epic</option>
-                    <option value="Legendary">Legendary</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="parent2">Parent 2's Rarity:</label>
-                <select id="parent2">
-                    <option value="Common">Common</option>
-                    <option value="Uncommon">Uncommon</option>
-                    <option value="Rare">Rare</option>
-                    <option value="Epic">Epic</option>
-                    <option value="Legendary">Legendary</option>
-                </select>
-            </div>
-            <button type="button" onclick="search()">Get Child's Rarity</button>
-        </form>
-        <div id="result" class="result-container">
-            <p id="result-text"></p>
+        <div class="input-container">
+            <label for="lines_text">Enter lines:</label><br>
+            <textarea id="lines_text" class="text-area"></textarea><br>
         </div>
-
-        <!-- Discord and Twitter links -->
-        <div class="social-links">
-            <a href="https://ghdc.gashero.com/invite?code=17001326320740" target="_blank">
-                <img src="discord_icon.png" alt="Discord Icon" style="width: 40px; height: 40px;">
-            </a>
-            <a href="https://twitter.com/dumbled00rz" target="_blank">
-                <img src="twitter_icon.png" alt="Twitter Icon" style="width: 50px; height: 40px;">
-            </a>
+        <div class="input-container">
+            <label for="separator_entry">Enter split separator:</label><br>
+            <input type="text" id="separator_entry"><br>
+            <button onclick="separateLines()">Separate</button>
+        </div>
+        <div class="input-container">
+            <label for="join_separator_entry">Enter join separator:</label><br>
+            <input type="text" id="join_separator_entry"><br>
+            <button onclick="joinLines()">Join</button>
         </div>
     </div>
+    <div class="container">
+        <div>
+            <label>Column 1:</label><br>
+            <textarea id="emails" class="text-area"></textarea>
+        </div>
+        <div>
+            <label>Column 2:</label><br>
+            <textarea id="phones" class="text-area"></textarea>
+        </div>
+    </div>
+    <div class="container">
+        <p id="result_label"></p>
+    </div>
 
-    <script src="script.js"></script>
+    <script>
+        function separateLines() {
+            const lines = document.getElementById("lines_text").value.split("\n");
+            const separator = document.getElementById("separator_entry").value;
+
+            if (!separator) {
+                document.getElementById("result_label").textContent = "Please enter a separator.";
+                return;
+            }
+
+            document.getElementById("emails").value = "";
+            document.getElementById("phones").value = "";
+
+            lines.forEach(line => {
+                const parts = line.split(separator);
+                if (parts.length >= 2) {
+                    const email = parts.shift().trim(); // Extract first part
+                    const phone = parts.join(separator).trim(); // Join remaining parts with separator
+                    document.getElementById("emails").value += email + "\n";
+                    document.getElementById("phones").value += phone + "\n";
+                } else {
+                    document.getElementById("result_label").textContent = "Each line must contain at least one separator.";
+                    return;
+                }
+            });
+
+            document.getElementById("result_label").textContent = "Lines separated successfully.";
+        }
+
+
+        function joinLines() {
+            const emailsList = document.getElementById("emails").value.split("\n");
+            const phonesList = document.getElementById("phones").value.split("\n");
+            const separator = document.getElementById("join_separator_entry").value;
+
+            if (emailsList.length !== phonesList.length) {
+                document.getElementById("result_label").textContent = "The email and phone lists must be the same length.";
+                return;
+            }
+            
+            let joinedLines = [];
+            for (let i = 0; i < emailsList.length; i++) {
+                joinedLines.push(emailsList[i] + separator + phonesList[i]);
+            }
+            
+            document.getElementById("lines_text").value = joinedLines.join("\n");
+            document.getElementById("result_label").textContent = "Lines joined and moved to input.";
+        }
+
+        function readFile() {
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = 'text/plain';
+            fileInput.addEventListener('change', function(event) {
+                const file = event.target.files[0];
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    document.getElementById("lines_text").value = event.target.result;
+                };
+                reader.readAsText(file);
+            });
+            fileInput.click();
+        }
+    </script>
 </body>
 </html>
