@@ -333,10 +333,6 @@
 
                 <div class="row">
                     <div class="field grow">
-                        <label for="dict_var_name">Python variable name</label>
-                        <input type="text" id="dict_var_name" value="headers">
-                    </div>
-                    <div class="field grow">
                         <label for="exclude_keys">Exclude keys (comma-separated, case-insensitive)</label>
                         <input type="text" id="exclude_keys" value=":method, :authority, :scheme, :path, :status, content-length">
                     </div>
@@ -350,7 +346,7 @@
                 <div class="field">
                     <label for="headers_output">Python dict</label>
                     <div class="output-box">
-                        <textarea id="headers_output" class="text-area" readonly placeholder="headers = {&#10;    ...&#10;}"></textarea>
+                        <textarea id="headers_output" class="text-area" readonly placeholder="{&#10;    ...&#10;}"></textarea>
                         <button type="button" class="btn ghost copy-btn" onclick="copyToClipboard('headers_output', this)">Copy</button>
                     </div>
                 </div>
@@ -561,7 +557,6 @@
 
     function convertHeaders() {
         const input = document.getElementById('headers_input').value;
-        const varNameRaw = document.getElementById('dict_var_name').value.trim() || 'headers';
         const excludeRaw = document.getElementById('exclude_keys').value;
         const warningEl = document.getElementById('headers_warning');
         const outputEl = document.getElementById('headers_output');
@@ -596,9 +591,7 @@
             return;
         }
 
-        const varName = /^[A-Za-z_][A-Za-z0-9_]*$/.test(varNameRaw) ? varNameRaw : 'headers';
-
-        let out = `${varName} = {\n`;
+        let out = '{\n';
         for (const { key, value } of entries) {
             out += `    ${pythonRepr(key)}: ${pythonRepr(value)},\n`;
         }
@@ -609,7 +602,6 @@
         if (excludedCount) notes.push(`${excludedCount} excluded.`);
         if (usedFallback) notes.push('Used fallback "Name: Value" parsing.');
         if (duplicates.length) notes.push(`Merged duplicate key(s): ${duplicates.join(', ')}.`);
-        if (varName !== varNameRaw) notes.push(`Variable name adjusted to "${varName}" (invalid Python identifier).`);
         showBadge(warningEl, notes.join(' '), usedFallback || duplicates.length > 0);
     }
 
@@ -617,7 +609,6 @@
         setTimeout(convertHeaders, 0);
     });
     document.getElementById('exclude_keys').addEventListener('input', convertHeaders);
-    document.getElementById('dict_var_name').addEventListener('input', convertHeaders);
 </script>
 </body>
 </html>
