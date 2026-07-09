@@ -1,131 +1,599 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Line Splitter and Joiner</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-        }
-        .container {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: space-around;
-            align-items: flex-start;
-            margin: 20px;
-        }
-        .text-area {
-            height: 300px; /* Increased height */
-            width: 80%; /* Adjusted width */
-            resize: none;
-        }
-        .input-container {
-            margin-bottom: 20px;
-        }
-        .input-container input[type="text"] {
-            width: 100%; /* Adjusted width */
-            margin-bottom: 10px;
-        }
-        .button-container button {
-            margin-top: 10px;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>dumbled00r · Dev Toolbox</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A7%B0%3C/text%3E%3C/svg%3E">
+<style>
+    :root {
+        --bg: #0e1016;
+        --bg-grad: radial-gradient(1200px 600px at 10% -10%, #1c2333 0%, transparent 60%),
+                   radial-gradient(1000px 500px at 100% 0%, #1a2a2c 0%, transparent 55%),
+                   #0e1016;
+        --panel: #151823;
+        --panel-2: #10131c;
+        --border: #262b3a;
+        --text: #e7e9f0;
+        --muted: #8b93a7;
+        --accent: #7aa2ff;
+        --accent-2: #63e2b7;
+        --danger: #ff8577;
+        --radius: 14px;
+        --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+        --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: var(--sans);
+        background: var(--bg-grad);
+        color: var(--text);
+    }
+
+    .app-shell {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 28px 20px 60px;
+    }
+
+    header.hero {
+        text-align: center;
+        padding: 20px 10px 30px;
+    }
+
+    header.hero h1 {
+        margin: 0 0 6px;
+        font-size: clamp(1.6rem, 3vw, 2.2rem);
+        letter-spacing: -0.02em;
+    }
+
+    header.hero p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.95rem;
+    }
+
+    nav.tabs {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: center;
+        margin-bottom: 24px;
+    }
+
+    .tab-btn {
+        appearance: none;
+        border: 1px solid var(--border);
+        background: var(--panel);
+        color: var(--muted);
+        padding: 10px 18px;
+        border-radius: 999px;
+        font-size: 0.92rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+
+    .tab-btn:hover {
+        color: var(--text);
+        border-color: var(--accent);
+    }
+
+    .tab-btn.active {
+        background: linear-gradient(135deg, var(--accent), #5b7fe0);
+        color: #0b0d13;
+        border-color: transparent;
+        box-shadow: 0 6px 18px -8px rgba(122, 162, 255, 0.6);
+    }
+
+    .panel { display: none; }
+    .panel.active { display: block; animation: fadeIn 0.25s ease; }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(4px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 22px 22px 24px;
+        box-shadow: 0 10px 30px -18px rgba(0, 0, 0, 0.6);
+        margin-bottom: 20px;
+    }
+
+    .card h2 {
+        margin: 0 0 6px;
+        font-size: 1.15rem;
+    }
+
+    .card .hint {
+        margin: 0 0 18px;
+        color: var(--muted);
+        font-size: 0.86rem;
+        line-height: 1.5;
+    }
+
+    .card .hint code {
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 1px 6px;
+        font-family: var(--mono);
+        font-size: 0.82rem;
+        color: var(--accent-2);
+    }
+
+    .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+    }
+
+    .field { margin-bottom: 16px; }
+    .field.grow { flex: 1; }
+
+    .field label {
+        display: block;
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: var(--muted);
+        margin-bottom: 6px;
+    }
+
+    textarea, input[type="text"] {
+        width: 100%;
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        color: var(--text);
+        font-family: var(--mono);
+        font-size: 0.86rem;
+        padding: 10px 12px;
+        outline: none;
+        transition: border-color 0.15s ease;
+    }
+
+    textarea:focus, input[type="text"]:focus {
+        border-color: var(--accent);
+    }
+
+    .text-area {
+        height: 260px;
+        resize: vertical;
+        line-height: 1.5;
+    }
+
+    .row {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        align-items: flex-end;
+    }
+
+    .btn {
+        appearance: none;
+        border: none;
+        border-radius: 10px;
+        padding: 10px 18px;
+        font-size: 0.86rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.1s ease, opacity 0.15s ease;
+        white-space: nowrap;
+    }
+
+    .btn:active { transform: scale(0.97); }
+
+    .btn.primary {
+        background: linear-gradient(135deg, var(--accent), #5b7fe0);
+        color: #0b0d13;
+    }
+
+    .btn.secondary {
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        color: var(--text);
+    }
+
+    .btn.ghost {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--muted);
+        padding: 6px 12px;
+        font-size: 0.78rem;
+    }
+
+    .btn.ghost:hover { color: var(--text); border-color: var(--accent); }
+
+    .btn:hover { opacity: 0.92; }
+
+    .output-box { position: relative; }
+
+    .copy-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+    }
+
+    .badge {
+        display: inline-block;
+        font-size: 0.8rem;
+        padding: 8px 12px;
+        border-radius: 8px;
+        margin-bottom: 14px;
+        line-height: 1.5;
+    }
+
+    .badge.info {
+        background: rgba(122, 162, 255, 0.12);
+        border: 1px solid rgba(122, 162, 255, 0.35);
+        color: #b9caff;
+    }
+
+    .badge.warn {
+        background: rgba(255, 133, 119, 0.1);
+        border: 1px solid rgba(255, 133, 119, 0.35);
+        color: #ffb3a7;
+    }
+
+    .hidden { display: none; }
+
+    footer {
+        text-align: center;
+        color: var(--muted);
+        font-size: 0.8rem;
+        margin-top: 30px;
+    }
+
+    footer a { color: var(--accent); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    @media (max-width: 720px) {
+        .grid { grid-template-columns: 1fr; }
+        .row { align-items: stretch; }
+    }
+</style>
 </head>
 <body>
-    <div class="container">
-        <div class="input-container">
-            <label for="lines_text">Enter lines:</label><br>
-            <textarea id="lines_text" class="text-area"></textarea><br>
-        </div>
-        <div class="input-container">
-            <label for="separator_entry">Enter split separator:</label><br>
-            <input type="text" id="separator_entry"><br>
-            <button onclick="separateLines()">Separate</button>
-        </div>
-        <div class="input-container">
-            <label for="join_separator_entry">Enter join separator:</label><br>
-            <input type="text" id="join_separator_entry"><br>
-            <button onclick="joinLines()">Join</button>
-        </div>
-    </div>
-    <div class="container">
-        <div>
-            <label>Column 1:</label><br>
-            <textarea id="emails" class="text-area"></textarea>
-        </div>
-        <div>
-            <label>Column 2:</label><br>
-            <textarea id="phones" class="text-area"></textarea>
-        </div>
-    </div>
-    <div class="container">
-        <p id="result_label"></p>
-    </div>
+<div class="app-shell">
+    <header class="hero">
+        <h1>🧰 dumbled00r's Dev Toolbox</h1>
+        <p>Small utilities, all client-side — nothing leaves your browser.</p>
+    </header>
 
-    <script>
-        function separateLines() {
-            const lines = document.getElementById("lines_text").value.split("\n");
-            const separator = document.getElementById("separator_entry").value;
+    <nav class="tabs" id="tabs">
+        <button type="button" class="tab-btn active" data-tool="splitter">Line Splitter &amp; Joiner</button>
+        <button type="button" class="tab-btn" data-tool="headers">Headers → Python Dict</button>
+    </nav>
 
-            if (!separator) {
-                document.getElementById("result_label").textContent = "Please enter a separator.";
-                return;
+    <main>
+        <!-- Tool 1: Line Splitter & Joiner -->
+        <section class="panel active" id="panel-splitter">
+            <div class="card">
+                <h2>Split &amp; Join</h2>
+                <p class="hint">Split each line into two columns on a separator, edit them independently, then join them back together.</p>
+
+                <div class="grid">
+                    <div class="field">
+                        <label for="lines_text">Input lines</label>
+                        <textarea id="lines_text" class="text-area"></textarea>
+                    </div>
+                    <div>
+                        <div class="field">
+                            <label for="separator_entry">Split separator</label>
+                            <input type="text" id="separator_entry">
+                        </div>
+                        <div class="field">
+                            <label for="join_separator_entry">Join separator</label>
+                            <input type="text" id="join_separator_entry">
+                        </div>
+                        <div class="row">
+                            <button type="button" class="btn primary" onclick="separateLines()">Separate →</button>
+                            <button type="button" class="btn secondary" onclick="joinLines()">← Join</button>
+                            <button type="button" class="btn ghost" onclick="readFile()">Load file…</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid">
+                    <div class="field">
+                        <label for="emails">Column 1</label>
+                        <textarea id="emails" class="text-area"></textarea>
+                    </div>
+                    <div class="field">
+                        <label for="phones">Column 2</label>
+                        <textarea id="phones" class="text-area"></textarea>
+                    </div>
+                </div>
+
+                <div id="result_label" class="badge info hidden"></div>
+            </div>
+        </section>
+
+        <!-- Tool 2: Headers -> Python dict -->
+        <section class="panel" id="panel-headers">
+            <div class="card">
+                <h2>Headers → Python Dict</h2>
+                <p class="hint">
+                    Paste headers formatted as <code>Key: name; Value: value</code> (one per line — e.g. from a headers
+                    formatter / devtools export). Converts automatically on paste. Also falls back to plain
+                    <code>Name: Value</code> lines if that format isn't detected.
+                </p>
+
+                <div class="field">
+                    <label for="headers_input">Raw headers</label>
+                    <textarea id="headers_input" class="text-area" placeholder="Key: :method; Value: POST&#10;Key: :authority; Value: example.com"></textarea>
+                </div>
+
+                <div class="row">
+                    <div class="field grow">
+                        <label for="dict_var_name">Python variable name</label>
+                        <input type="text" id="dict_var_name" value="headers">
+                    </div>
+                    <div class="field">
+                        <button type="button" class="btn primary" onclick="convertHeaders()">Convert →</button>
+                    </div>
+                </div>
+
+                <div id="headers_warning" class="badge warn hidden"></div>
+
+                <div class="field">
+                    <label for="headers_output">Python dict</label>
+                    <div class="output-box">
+                        <textarea id="headers_output" class="text-area" readonly placeholder="headers = {&#10;    ...&#10;}"></textarea>
+                        <button type="button" class="btn ghost copy-btn" onclick="copyToClipboard('headers_output', this)">Copy</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <a href="https://github.com/dumbled00r" target="_blank" rel="noopener">github.com/dumbled00r</a>
+    </footer>
+</div>
+
+<script>
+    /* ---------- Tab switching ---------- */
+    function activateTool(tool) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tool === tool));
+        document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + tool));
+    }
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            activateTool(btn.dataset.tool);
+            history.replaceState(null, '', '#' + btn.dataset.tool);
+        });
+    });
+
+    (function initTabFromHash() {
+        const hash = location.hash.replace('#', '');
+        if (hash && document.getElementById('panel-' + hash)) {
+            activateTool(hash);
+        }
+    })();
+
+    /* ---------- Shared utilities ---------- */
+    function copyToClipboard(elementId, btn) {
+        const el = document.getElementById(elementId);
+        if (!el.value) return;
+        navigator.clipboard.writeText(el.value).then(() => {
+            const original = btn.textContent;
+            btn.textContent = 'Copied!';
+            setTimeout(() => { btn.textContent = original; }, 1300);
+        });
+    }
+
+    function showBadge(el, text, isWarn) {
+        el.textContent = text;
+        el.classList.remove('hidden');
+        el.classList.toggle('warn', !!isWarn);
+        el.classList.toggle('info', !isWarn);
+    }
+
+    /* ---------- Tool 1: Line Splitter & Joiner ---------- */
+    function separateLines() {
+        const lines = document.getElementById("lines_text").value.split("\n");
+        const separator = document.getElementById("separator_entry").value;
+        const resultLabel = document.getElementById("result_label");
+
+        if (!separator) {
+            showBadge(resultLabel, "Please enter a separator.", true);
+            return;
+        }
+
+        document.getElementById("emails").value = "";
+        document.getElementById("phones").value = "";
+
+        let hadError = false;
+        lines.forEach(line => {
+            if (!line) return;
+            const parts = line.split(separator);
+            if (parts.length >= 2) {
+                const email = parts.shift().trim();
+                const phone = parts.join(separator).trim();
+                document.getElementById("emails").value += email + "\n";
+                document.getElementById("phones").value += phone + "\n";
+            } else {
+                hadError = true;
             }
+        });
 
-            document.getElementById("emails").value = "";
-            document.getElementById("phones").value = "";
+        showBadge(resultLabel, hadError
+            ? "Some lines didn't contain the separator and were skipped."
+            : "Lines separated successfully.", hadError);
+    }
 
-            lines.forEach(line => {
-                const parts = line.split(separator);
-                if (parts.length >= 2) {
-                    const email = parts.shift().trim(); // Extract first part
-                    const phone = parts.join(separator).trim(); // Join remaining parts with separator
-                    document.getElementById("emails").value += email + "\n";
-                    document.getElementById("phones").value += phone + "\n";
-                } else {
-                    document.getElementById("result_label").textContent = "Each line must contain at least one separator.";
-                    return;
+    function joinLines() {
+        const emailsList = document.getElementById("emails").value.split("\n");
+        const phonesList = document.getElementById("phones").value.split("\n");
+        const separator = document.getElementById("join_separator_entry").value;
+        const resultLabel = document.getElementById("result_label");
+
+        if (emailsList.length !== phonesList.length) {
+            showBadge(resultLabel, "The two columns must have the same number of lines.", true);
+            return;
+        }
+
+        let joinedLines = [];
+        for (let i = 0; i < emailsList.length; i++) {
+            joinedLines.push(emailsList[i] + separator + phonesList[i]);
+        }
+
+        document.getElementById("lines_text").value = joinedLines.join("\n");
+        showBadge(resultLabel, "Lines joined and moved to input.", false);
+    }
+
+    function readFile() {
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'text/plain';
+        fileInput.addEventListener('change', function (event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                document.getElementById("lines_text").value = event.target.result;
+            };
+            reader.readAsText(file);
+        });
+        fileInput.click();
+    }
+
+    /* ---------- Tool 2: Headers -> Python dict ---------- */
+
+    // Mimics Python's str repr(): picks a quote style, escapes backslashes,
+    // quotes and control characters so the output is copy-pasteable Python.
+    function pythonRepr(str) {
+        const hasSingle = str.includes("'");
+        const hasDouble = str.includes('"');
+        const quote = (hasSingle && !hasDouble) ? '"' : "'";
+
+        let out = quote;
+        for (const ch of str) {
+            const code = ch.codePointAt(0);
+            if (ch === '\\') out += '\\\\';
+            else if (ch === quote) out += '\\' + quote;
+            else if (ch === '\n') out += '\\n';
+            else if (ch === '\r') out += '\\r';
+            else if (ch === '\t') out += '\\t';
+            else if (code < 0x20 || code === 0x7f) out += '\\x' + code.toString(16).padStart(2, '0');
+            else out += ch;
+        }
+        out += quote;
+        return out;
+    }
+
+    // Parses "Key: name; Value: value" lines (one header per line).
+    // Falls back to plain "Name: Value" lines if none match.
+    // Handles CRLF, wrapped/multi-line values, and duplicate keys.
+    function parseHeaderText(text) {
+        const rawLines = text.split(/\r\n|\r|\n/);
+        const keyRe = /^\s*Key\s*:\s*/i;
+        const valSepRe = /;\s*Value\s*:\s*/i;
+        const entries = [];
+        let matchedPrimary = false;
+
+        for (const line of rawLines) {
+            if (!line.trim()) continue;
+            const keyMatch = line.match(keyRe);
+            if (keyMatch) {
+                const rest = line.slice(keyMatch[0].length);
+                const sepMatch = rest.match(valSepRe);
+                if (sepMatch) {
+                    const key = rest.slice(0, sepMatch.index).trim();
+                    const value = rest.slice(sepMatch.index + sepMatch[0].length);
+                    entries.push({ key, value });
+                    matchedPrimary = true;
+                    continue;
                 }
-            });
-
-            document.getElementById("result_label").textContent = "Lines separated successfully.";
-        }
-
-
-        function joinLines() {
-            const emailsList = document.getElementById("emails").value.split("\n");
-            const phonesList = document.getElementById("phones").value.split("\n");
-            const separator = document.getElementById("join_separator_entry").value;
-
-            if (emailsList.length !== phonesList.length) {
-                document.getElementById("result_label").textContent = "The email and phone lists must be the same length.";
-                return;
             }
-            
-            let joinedLines = [];
-            for (let i = 0; i < emailsList.length; i++) {
-                joinedLines.push(emailsList[i] + separator + phonesList[i]);
+            // Continuation of a wrapped value (only once we're in primary-format mode).
+            if (matchedPrimary && entries.length > 0) {
+                entries[entries.length - 1].value += '\n' + line;
             }
-            
-            document.getElementById("lines_text").value = joinedLines.join("\n");
-            document.getElementById("result_label").textContent = "Lines joined and moved to input.";
         }
 
-        function readFile() {
-            const fileInput = document.createElement('input');
-            fileInput.type = 'file';
-            fileInput.accept = 'text/plain';
-            fileInput.addEventListener('change', function(event) {
-                const file = event.target.files[0];
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    document.getElementById("lines_text").value = event.target.result;
-                };
-                reader.readAsText(file);
-            });
-            fileInput.click();
+        let usedFallback = false;
+        if (entries.length === 0) {
+            usedFallback = true;
+            for (const line of rawLines) {
+                const trimmed = line.trim();
+                if (!trimmed) continue;
+                const idx = trimmed.indexOf(':');
+                if (idx === -1) continue;
+                const key = trimmed.slice(0, idx).trim();
+                const value = trimmed.slice(idx + 1).trim();
+                if (key) entries.push({ key, value });
+            }
         }
-    </script>
+
+        entries.forEach(e => { e.value = e.value.replace(/\s+$/, ''); });
+
+        // Merge duplicate keys (HTTP allows repeated headers) by joining values,
+        // since a Python dict can't hold duplicate keys.
+        const seen = new Map();
+        const duplicates = new Set();
+        const merged = [];
+        for (const { key, value } of entries) {
+            if (seen.has(key)) {
+                duplicates.add(key);
+                merged[seen.get(key)].value += ', ' + value;
+            } else {
+                seen.set(key, merged.length);
+                merged.push({ key, value });
+            }
+        }
+
+        return { entries: merged, usedFallback, duplicates: [...duplicates] };
+    }
+
+    function convertHeaders() {
+        const input = document.getElementById('headers_input').value;
+        const varNameRaw = document.getElementById('dict_var_name').value.trim() || 'headers';
+        const warningEl = document.getElementById('headers_warning');
+        const outputEl = document.getElementById('headers_output');
+
+        if (!input.trim()) {
+            outputEl.value = '';
+            warningEl.classList.add('hidden');
+            return;
+        }
+
+        const { entries, usedFallback, duplicates } = parseHeaderText(input);
+
+        if (entries.length === 0) {
+            outputEl.value = '';
+            showBadge(warningEl, 'No headers detected. Expected lines like "Key: name; Value: value".', true);
+            return;
+        }
+
+        const varName = /^[A-Za-z_][A-Za-z0-9_]*$/.test(varNameRaw) ? varNameRaw : 'headers';
+
+        let out = `${varName} = {\n`;
+        for (const { key, value } of entries) {
+            out += `    ${pythonRepr(key)}: ${pythonRepr(value)},\n`;
+        }
+        out += '}';
+        outputEl.value = out;
+
+        const notes = [`${entries.length} header${entries.length === 1 ? '' : 's'} parsed.`];
+        if (usedFallback) notes.push('Used fallback "Name: Value" parsing.');
+        if (duplicates.length) notes.push(`Merged duplicate key(s): ${duplicates.join(', ')}.`);
+        if (varName !== varNameRaw) notes.push(`Variable name adjusted to "${varName}" (invalid Python identifier).`);
+        showBadge(warningEl, notes.join(' '), usedFallback || duplicates.length > 0);
+    }
+
+    document.getElementById('headers_input').addEventListener('paste', () => {
+        setTimeout(convertHeaders, 0);
+    });
+</script>
 </body>
 </html>
