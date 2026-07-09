@@ -336,6 +336,10 @@
                         <label for="dict_var_name">Python variable name</label>
                         <input type="text" id="dict_var_name" value="headers">
                     </div>
+                    <div class="field grow">
+                        <label for="exclude_keys">Exclude keys (comma-separated, case-insensitive)</label>
+                        <input type="text" id="exclude_keys" value=":method, :authority, :scheme, :path, :status, content-length">
+                    </div>
                     <div class="field">
                         <button type="button" class="btn primary" onclick="convertHeaders()">Convert →</button>
                     </div>
@@ -558,6 +562,7 @@
     function convertHeaders() {
         const input = document.getElementById('headers_input').value;
         const varNameRaw = document.getElementById('dict_var_name').value.trim() || 'headers';
+        const excludeRaw = document.getElementById('exclude_keys').value;
         const warningEl = document.getElementById('headers_warning');
         const outputEl = document.getElementById('headers_output');
 
@@ -567,11 +572,27 @@
             return;
         }
 
-        const { entries, usedFallback, duplicates } = parseHeaderText(input);
+        const { entries: allEntries, usedFallback, duplicates } = parseHeaderText(input);
+
+        if (allEntries.length === 0) {
+            outputEl.value = '';
+            showBadge(warningEl, 'No headers detected. Expected lines like "Key: name; Value: value".', true);
+            return;
+        }
+
+        // Strip HTTP/2 pseudo-headers (:method, :authority, ...) and anything
+        // else the user lists — these aren't real request headers and either
+        // don't belong in a `requests`/`httpx` headers dict or are computed
+        // automatically by the client (e.g. content-length).
+        const excludeSet = new Set(
+            excludeRaw.split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+        );
+        const entries = allEntries.filter(e => !excludeSet.has(e.key.toLowerCase()));
+        const excludedCount = allEntries.length - entries.length;
 
         if (entries.length === 0) {
             outputEl.value = '';
-            showBadge(warningEl, 'No headers detected. Expected lines like "Key: name; Value: value".', true);
+            showBadge(warningEl, 'All parsed headers were excluded — adjust the exclude list.', true);
             return;
         }
 
@@ -584,7 +605,8 @@
         out += '}';
         outputEl.value = out;
 
-        const notes = [`${entries.length} header${entries.length === 1 ? '' : 's'} parsed.`];
+        const notes = [`${entries.length} header${entries.length === 1 ? '' : 's'} included.`];
+        if (excludedCount) notes.push(`${excludedCount} excluded.`);
         if (usedFallback) notes.push('Used fallback "Name: Value" parsing.');
         if (duplicates.length) notes.push(`Merged duplicate key(s): ${duplicates.join(', ')}.`);
         if (varName !== varNameRaw) notes.push(`Variable name adjusted to "${varName}" (invalid Python identifier).`);
@@ -594,6 +616,8 @@
     document.getElementById('headers_input').addEventListener('paste', () => {
         setTimeout(convertHeaders, 0);
     });
+    document.getElementById('exclude_keys').addEventListener('input', convertHeaders);
+    document.getElementById('dict_var_name').addEventListener('input', convertHeaders);
 </script>
 </body>
 </html>
