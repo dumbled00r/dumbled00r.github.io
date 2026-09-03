@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>dumbled00r · Dev Toolbox</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A7%B0%3C/text%3E%3C/svg%3E">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
     :root {
         --bg: #0e1016;
@@ -258,6 +259,95 @@
         .grid { grid-template-columns: 1fr; }
         .row { align-items: stretch; }
     }
+
+    /* --- Follower Diff tool (scoped with fd- prefix, reuses tokens above) --- */
+    .fd-drop {
+        border: 1.5px dashed var(--border);
+        border-radius: 10px;
+        padding: 16px 12px;
+        text-align: center;
+        cursor: pointer;
+        transition: border-color 0.15s ease, background 0.15s ease;
+    }
+
+    .fd-drop:hover, .fd-drop.fd-drag {
+        border-color: var(--accent);
+        background: rgba(122, 162, 255, 0.08);
+    }
+
+    .fd-drop-title { font-size: 0.86rem; font-weight: 600; margin-bottom: 2px; }
+    .fd-drop-sub { font-size: 0.78rem; color: var(--muted); }
+
+    .fd-fileinfo {
+        margin-top: 8px;
+        font-size: 0.78rem;
+        color: var(--accent-2);
+    }
+
+    .fd-fileinfo.fd-error { color: var(--danger); }
+
+    .fd-count {
+        margin-top: 6px;
+        font-size: 0.78rem;
+        color: var(--muted);
+    }
+
+    .fd-stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        margin-bottom: 18px;
+    }
+
+    .fd-stat {
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 14px 16px;
+    }
+
+    .fd-stat.fd-new { border-color: rgba(99, 226, 183, 0.4); }
+    .fd-stat.fd-gone { border-color: rgba(255, 133, 119, 0.4); }
+
+    .fd-stat-num { font-size: 1.6rem; font-weight: 700; }
+    .fd-stat.fd-new .fd-stat-num { color: var(--accent-2); }
+    .fd-stat.fd-gone .fd-stat-num { color: var(--danger); }
+    .fd-stat-label { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+
+    .fd-list-block {
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        margin-bottom: 14px;
+        overflow: hidden;
+    }
+
+    .fd-list-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .fd-list-head.fd-new { background: rgba(99, 226, 183, 0.08); }
+    .fd-list-head.fd-gone { background: rgba(255, 133, 119, 0.08); }
+
+    .fd-list-title { font-weight: 700; font-size: 0.86rem; }
+    .fd-list-title.fd-new { color: var(--accent-2); }
+    .fd-list-title.fd-gone { color: var(--danger); }
+
+    .fd-list-body {
+        max-height: 240px;
+        overflow-y: auto;
+        padding: 6px 14px;
+        font-family: var(--mono);
+        font-size: 0.82rem;
+    }
+
+    .fd-list-body div { padding: 5px 0; border-bottom: 1px solid var(--border); }
+    .fd-list-body div:last-child { border-bottom: none; }
+    .fd-empty-row { color: var(--muted); font-style: italic; }
 </style>
 </head>
 <body>
@@ -270,6 +360,7 @@
     <nav class="tabs" id="tabs">
         <button type="button" class="tab-btn active" data-tool="splitter">Line Splitter &amp; Joiner</button>
         <button type="button" class="tab-btn" data-tool="headers">Headers → Python Dict</button>
+        <button type="button" class="tab-btn" data-tool="followers">Follower Diff</button>
     </nav>
 
     <main>
@@ -348,6 +439,81 @@
                     <div class="output-box">
                         <textarea id="headers_output" class="text-area" readonly placeholder="{&#10;    ...&#10;}"></textarea>
                         <button type="button" class="btn ghost copy-btn" onclick="copyToClipboard('headers_output', this)">Copy</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tool 3: Follower Diff -->
+        <section class="panel" id="panel-followers">
+            <div class="card">
+                <h2>Follower Diff</h2>
+                <p class="hint">
+                    Paste or upload yesterday's and today's follower list (Excel/CSV or plain text works — every cell
+                    across every sheet is scanned and de-duplicated) to see who's new and who unfollowed.
+                </p>
+
+                <div class="grid">
+                    <div class="field">
+                        <label>Yesterday</label>
+                        <div class="fd-drop" id="fd-drop-yesterday">
+                            <input type="file" id="fd-file-yesterday" class="hidden" accept=".xlsx,.xls,.csv">
+                            <div class="fd-drop-title">Drop a file here</div>
+                            <div class="fd-drop-sub">or click to choose (.xlsx, .xls, .csv)</div>
+                            <div class="fd-fileinfo hidden" id="fd-fileinfo-yesterday"></div>
+                        </div>
+                        <textarea id="fd-text-yesterday" class="text-area" style="height:140px;margin-top:10px" placeholder="Or paste a list of usernames, one per line"></textarea>
+                        <div class="fd-count" id="fd-count-yesterday"></div>
+                    </div>
+                    <div class="field">
+                        <label>Today</label>
+                        <div class="fd-drop" id="fd-drop-today">
+                            <input type="file" id="fd-file-today" class="hidden" accept=".xlsx,.xls,.csv">
+                            <div class="fd-drop-title">Drop a file here</div>
+                            <div class="fd-drop-sub">or click to choose (.xlsx, .xls, .csv)</div>
+                            <div class="fd-fileinfo hidden" id="fd-fileinfo-today"></div>
+                        </div>
+                        <textarea id="fd-text-today" class="text-area" style="height:140px;margin-top:10px" placeholder="Or paste a list of usernames, one per line"></textarea>
+                        <div class="fd-count" id="fd-count-today"></div>
+                    </div>
+                </div>
+
+                <div class="row" style="justify-content:center; margin: 4px 0 16px;">
+                    <button type="button" class="btn primary" onclick="fdCompare()">Compare</button>
+                </div>
+
+                <div id="fd-error" class="badge warn hidden"></div>
+
+                <div id="fd-results" class="hidden">
+                    <div class="fd-stats">
+                        <div class="fd-stat fd-new">
+                            <div class="fd-stat-num" id="fd-new-count">0</div>
+                            <div class="fd-stat-label">New followers</div>
+                        </div>
+                        <div class="fd-stat fd-gone">
+                            <div class="fd-stat-num" id="fd-gone-count">0</div>
+                            <div class="fd-stat-label">Unfollowed</div>
+                        </div>
+                    </div>
+
+                    <div class="fd-list-block">
+                        <div class="fd-list-head fd-new">
+                            <span class="fd-list-title fd-new">New followers</span>
+                            <button type="button" class="btn ghost" onclick="fdExport(fdLastNew, 'new_followers.csv')">Export CSV</button>
+                        </div>
+                        <div class="fd-list-body" id="fd-new-list"></div>
+                    </div>
+
+                    <div class="fd-list-block">
+                        <div class="fd-list-head fd-gone">
+                            <span class="fd-list-title fd-gone">Unfollowed</span>
+                            <button type="button" class="btn ghost" onclick="fdExport(fdLastGone, 'unfollowed.csv')">Export CSV</button>
+                        </div>
+                        <div class="fd-list-body" id="fd-gone-list"></div>
+                    </div>
+
+                    <div class="row" style="justify-content:center; margin-top: 4px;">
+                        <button type="button" class="btn secondary" onclick="fdExportBoth()">Export both (2 CSV files)</button>
                     </div>
                 </div>
             </div>
@@ -609,6 +775,173 @@
         setTimeout(convertHeaders, 0);
     });
     document.getElementById('exclude_keys').addEventListener('input', convertHeaders);
+
+    /* ---------- Tool 3: Follower Diff ---------- */
+    const fdState = { yesterday: null, today: null };
+    let fdLastNew = [];
+    let fdLastGone = [];
+
+    function fdNormalizeToken(raw) {
+        if (raw === null || raw === undefined) return null;
+        let s = String(raw).trim();
+        s = s.replace(/^["']+|["']+$/g, '').trim();
+        if (!s) return null;
+        if (/^(username|user|users|follower|followers|following)$/i.test(s)) return null;
+        return s;
+    }
+
+    function fdExtractFromWorkbook(workbook) {
+        const out = [];
+        workbook.SheetNames.forEach(name => {
+            const sheet = workbook.Sheets[name];
+            const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: '' });
+            rows.forEach(row => {
+                row.forEach(cell => {
+                    const tok = fdNormalizeToken(cell);
+                    if (tok) out.push(tok);
+                });
+            });
+        });
+        return out;
+    }
+
+    function fdExtractFromText(text) {
+        return text
+            .split(/[\n,;\t]+/)
+            .map(fdNormalizeToken)
+            .filter(Boolean);
+    }
+
+    function fdDedupe(tokens) {
+        const seen = new Set();
+        const result = [];
+        tokens.forEach(t => {
+            const key = t.toLowerCase();
+            if (!seen.has(key)) {
+                seen.add(key);
+                result.push(t);
+            }
+        });
+        return result;
+    }
+
+    function fdSetupSide(key) {
+        const drop = document.getElementById(`fd-drop-${key}`);
+        const input = document.getElementById(`fd-file-${key}`);
+        const info = document.getElementById(`fd-fileinfo-${key}`);
+        const textarea = document.getElementById(`fd-text-${key}`);
+        const countBadge = document.getElementById(`fd-count-${key}`);
+
+        function updateCount() {
+            const fromFile = fdState[key] ? fdState[key].tokens : [];
+            const fromText = fdExtractFromText(textarea.value);
+            const merged = fdDedupe(fromFile.concat(fromText));
+            countBadge.textContent = merged.length ? `${merged.length} unique usernames ready` : '';
+        }
+
+        function handleFile(file) {
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const tokens = fdDedupe(fdExtractFromWorkbook(workbook));
+                    fdState[key] = { tokens, filename: file.name };
+                    info.classList.remove('hidden', 'fd-error');
+                    info.textContent = `${file.name} — ${tokens.length} usernames`;
+                    updateCount();
+                } catch (err) {
+                    info.classList.remove('hidden');
+                    info.classList.add('fd-error');
+                    info.textContent = 'Could not read that file. Try pasting the list instead.';
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        drop.addEventListener('click', () => input.click());
+        input.addEventListener('change', () => handleFile(input.files[0]));
+        drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('fd-drag'); });
+        drop.addEventListener('dragleave', () => drop.classList.remove('fd-drag'));
+        drop.addEventListener('drop', (e) => {
+            e.preventDefault();
+            drop.classList.remove('fd-drag');
+            handleFile(e.dataTransfer.files[0]);
+        });
+        textarea.addEventListener('input', updateCount);
+    }
+
+    fdSetupSide('yesterday');
+    fdSetupSide('today');
+
+    function fdGetMergedTokens(key) {
+        const fromFile = fdState[key] ? fdState[key].tokens : [];
+        const textarea = document.getElementById(`fd-text-${key}`);
+        const fromText = fdExtractFromText(textarea.value);
+        return fdDedupe(fromFile.concat(fromText));
+    }
+
+    function fdRenderList(containerId, items) {
+        const container = document.getElementById(containerId);
+        container.innerHTML = '';
+        if (items.length === 0) {
+            const div = document.createElement('div');
+            div.className = 'fd-empty-row';
+            div.textContent = 'None';
+            container.appendChild(div);
+            return;
+        }
+        items.forEach(name => {
+            const div = document.createElement('div');
+            div.textContent = name;
+            container.appendChild(div);
+        });
+    }
+
+    function fdExport(data, filename) {
+        const rows = data.map(u => `"${String(u).replace(/"/g, '""')}"`).join('\n');
+        const blob = new Blob([rows], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', filename);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }
+
+    function fdExportBoth() {
+        fdExport(fdLastNew, 'new_followers.csv');
+        fdExport(fdLastGone, 'unfollowed.csv');
+    }
+
+    function fdCompare() {
+        const errorEl = document.getElementById('fd-error');
+        errorEl.classList.add('hidden');
+
+        const yesterdayTokens = fdGetMergedTokens('yesterday');
+        const todayTokens = fdGetMergedTokens('today');
+
+        if (yesterdayTokens.length === 0 || todayTokens.length === 0) {
+            showBadge(errorEl, 'Add data for both yesterday and today before comparing.', true);
+            return;
+        }
+
+        const yesterdaySet = new Set(yesterdayTokens.map(t => t.toLowerCase()));
+        const todaySet = new Set(todayTokens.map(t => t.toLowerCase()));
+
+        fdLastNew = todayTokens.filter(t => !yesterdaySet.has(t.toLowerCase()));
+        fdLastGone = yesterdayTokens.filter(t => !todaySet.has(t.toLowerCase()));
+
+        document.getElementById('fd-new-count').textContent = fdLastNew.length;
+        document.getElementById('fd-gone-count').textContent = fdLastGone.length;
+        fdRenderList('fd-new-list', fdLastNew);
+        fdRenderList('fd-gone-list', fdLastGone);
+
+        document.getElementById('fd-results').classList.remove('hidden');
+    }
 </script>
 </body>
 </html>
